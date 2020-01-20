@@ -8,6 +8,16 @@ import re
 import os
 from itertools import islice
 
+args = dict(zip(['script', 'input_file', 'driver_dir', 'output_dir', 'sleep_interval'], sys.argv))
+
+if 'driver_dir' not in args:
+    args['driver_dir'] = os.getcwd() + "/chromedriver"
+
+if 'sleep_interval' in args:
+    args['sleep_interval'] = int(args['sleep_interval'])
+else:
+    args['sleep_interval'] = 5
+
 #build the string that goes into the text area
 def string_builder(my_keys, my_dict):
     string = ""
@@ -52,13 +62,13 @@ def get_geno2pheno_results():
     seq_field = driver.find_element(By.XPATH, '//*[@id="g2pmain"]/div/center/table/tbody/tr[8]/td/textarea')
     seq_field.send_keys(txt_field)
     #print("This is the next line!")
-    time.sleep(5) #Let the user actually see something!
+    time.sleep(args['sleep_interval']) #Let the user actually see something!
 
     #click the align predicted button
     go = driver.find_element(By.XPATH,'//*[@id="XactionCell"]/input')
     go.click()
 
-    time.sleep(5)
+    time.sleep(args['sleep_interval'])
     t_results = driver.find_element(By.XPATH,'//*[@id="g2pmain"]/div/table[2]')
 
     return t_results
@@ -117,15 +127,19 @@ def new_input():
 patID_seq = {}
 seq_nextline_in = ""
 c_i = 0
-today = date.today()
 #raw_input(today)
 #output log for writting results
-log_file = open('Geno2PhenoTest' + str(today) + '_log', 'w')
-log_file.write('ID\t\t\t\tV3 Loop\t\t\t\tSubtype\t\t\t\tFPR\t\t\t\tpercentage')
 #file for the sequences that should be included
-fasta_out_file = open('Geno2PhenoTest' + str(today) + '.fasta', 'w')
+if 'output_dir' in args:
+    os.system('mkdir -p ' + args['output_dir'])
+    log_file = open(args['output_dir'] + 'Geno2PhenoTest_log', 'w')
+    fasta_out_file = open(args['output_dir'] + 'Geno2PhenoTest.fasta', 'w')
+else:
+    today = str(date.today())
+    log_file = open('Geno2PhenoTest' + today + '_log', 'w')
+    fasta_out_file = open('Geno2PhenoTest' + today + '.fasta', 'w')   
 
-
+log_file.write('ID\t\t\t\tV3 Loop\t\t\t\tSubtype\t\t\t\tFPR\t\t\t\tpercentage')
 
 with open(sys.argv[1], 'r') as seq_file:
     lines = seq_file.readlines()
@@ -163,12 +177,13 @@ sys.stdout.write("\b" * (tw+1)) # return to start of line, after '['
 new_prog = 0.0
 
 orig_len = len(patID_seq)
-dirpath = os.getcwd()
+
 #locate the driver
 options = Options()
 options.add_argument("--headless")
 options.add_argument('--disable-gpu')  # Last I checked this was necessary.
-driver = webdriver.Chrome(dirpath + "/chromedriver", chrome_options=options)
+options.add_argument('--no-sandbox')
+driver = webdriver.Chrome(args['driver_dir'], chrome_options=options)
 driver.get('https://coreceptor.geno2pheno.org/');
 
 while len(patID_seq) != 0:
@@ -185,7 +200,7 @@ while len(patID_seq) != 0:
             select_level = driver.find_element(By.XPATH, '//*[@id="g2pmain"]/div/center/table/tbody/tr[5]/td/select/option[8]') #selecting sig_level
             select_level.click()
             seq_field = driver.find_element(By.XPATH, '//*[@id="g2pmain"]/div/center/table/tbody/tr[8]/td/textarea')
-            time.sleep(5) #Let the user actually see something!
+            time.sleep(args['sleep_interval']) #Let the user actually see something!
             seq_field.send_keys('>' + id + '\n' + seq)
             go = driver.find_element(By.XPATH,'//*[@id="XactionCell"]/input')
             go.click()
@@ -246,7 +261,7 @@ while len(patID_seq) != 0:
         [patID_seq.pop(key) for key in cur_keys]
         new_input()
 
-    time.sleep(5)
+    time.sleep(args['sleep_interval'])
     #display how much progress has been made
     prev_prog = new_prog
     new_prog = (40 - (len(patID_seq)/float(orig_len))*40)
@@ -257,10 +272,11 @@ while len(patID_seq) != 0:
 
 
     #raw_input()
+
 #finish updating progress bar
 sys.stdout.write("]\n")
 print("One Moment.  Preparing Your Files!")
-time.sleep(5)
+time.sleep(args['sleep_interval'])
 #raw_input('pause')
 
 # dirpath = os.getcwd()
