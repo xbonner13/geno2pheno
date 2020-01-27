@@ -29,16 +29,16 @@ def string_builder(my_keys, my_dict):
 # TODO: make a way to put the subtype B and other subtypes in the log file
 def log_file_string_creator(to_w):
     out_string = ""
-    for i in range(len(to_w)):
-        if i != 0:
-            line = to_w[i].split(' ')
-            if len(line) == 6:
-                out_string = out_string + '\n' + line[1] + '\t\t\t\t' + line[2] + '\t\t\t\t' + line[3] + '\t\t\t\t' + line[4] + '\t\t\t\t' + line[5] #generate the log file string
+    j = len(to_w)
+    for i in range(1, j):
+        line = to_w[i].split(' ')
+        if len(line) == 6:
+            out_string += '\n' + line[1] + '\t\t\t\t' + line[2] + '\t\t\t\t' + line[3] + '\t\t\t\t' + line[4] + '\t\t\t\t' + line[5] #generate the log file string
+        else:
+            if line[3] == 'B':
+                out_string += '\n' + line[1] + '\t\t\t\t' + line[2] + '\t\t\t\t' + line[3] + '\t\t\t\t' + line[4] + '\t\t\t\t' + line[5]
             else:
-                if line[3] == 'B':
-                    out_string = out_string + '\n' + line[1] + '\t\t\t\t' + line[2] + '\t\t\t\t' + line[3] + '\t\t\t\t' + line[4] + '\t\t\t\t' + line[5]
-                else:
-                    out_string = out_string + '\n' + line[1] + '\t\t\t\t' + line[2] + '\t\t\t\t' + line[3] + '\t\t\t\t' + line[6] + '\t\t\t\t' + line[7]
+                out_string += '\n' + line[1] + '\t\t\t\t' + line[2] + '\t\t\t\t' + line[3] + '\t\t\t\t' + line[6] + '\t\t\t\t' + line[7]
     return out_string
 
 #extract the coreceptor table from the website
@@ -58,22 +58,22 @@ def get_geno2pheno_results():
 
 #write the good CCR5 sequences to a fasta file
 def write_fasta(results_arr, patID_seq):
-    for i in range(len(results_arr)):
+    j = len(results_arr)
+    for i in range(1, j):
         results_eles = results_arr[i].split()
-        if i != 0:
-            test_value = results_eles[4][0:len(results_eles[4]) - 1]
-            try:
-                test_value = float(test_value)
-                if results_eles[3] == 'B':
-                    if  test_value > 7.0:
-                        seq_to_write = re.sub("(.{64})", "\\1\n", patID_seq[results_arr[i].split(' ')[1]], 0, re.DOTALL)
-                        fasta_out_file.write('>' + results_arr[i].split(' ')[1] + '\n' + seq_to_write + '\n')
-            except Exception as e:
-                if results_eles[3] == 'B':
-                    test_value = float(results_eles[4][0:len(results_eles[4]) - 1])
-                    if test_value > 7.0: #if the prodiction is still subtype B add it to the fasta file else do not add it
-                        seq_to_write = re.sub("(.{64})", "\\1\n", patID_seq[results_arr[i].split(' ')[1]], 0, re.DOTALL)
-                        fasta_out_file.write('>' + results_arr[i].split(' ')[1] + '\n' + seq_to_write + '\n')
+        test_value = results_eles[4][0:len(results_eles[4]) - 1]
+        try:
+            test_value = float(test_value)
+            if results_eles[3] == 'B':
+                if  test_value > 7.0:
+                    seq_to_write = re.sub("(.{64})", "\\1\n", patID_seq[results_arr[i].split(' ')[1]], 0, re.DOTALL)
+                    fasta_out_file.write('>' + results_arr[i].split(' ')[1] + '\n' + seq_to_write + '\n')
+        except Exception as e:
+            if results_eles[3] == 'B':
+                test_value = float(results_eles[4][0:len(results_eles[4]) - 1])
+                if test_value > 7.0: #if the prodiction is still subtype B add it to the fasta file else do not add it
+                    seq_to_write = re.sub("(.{64})", "\\1\n", patID_seq[results_arr[i].split(' ')[1]], 0, re.DOTALL)
+                    fasta_out_file.write('>' + results_arr[i].split(' ')[1] + '\n' + seq_to_write + '\n')
     return 0
 
 def new_input():
@@ -107,7 +107,7 @@ for line in lines:
         id = line[1:(len(line) -1)]
     #builds protein sequence line by line in fasta
     if line[0] != '>':
-        seq_nextline_in = seq_nextline_in + line.rstrip()
+        seq_nextline_in += line.rstrip()
     #see if next line is the beginning of a new sequence
     try:
         if lines[c_i + 1][0] == '>':
@@ -115,13 +115,14 @@ for line in lines:
             seq_nextline_in = ""
     except IndexError:
         patID_seq[id] = seq_nextline_in
-    c_i = c_i + 1
+    c_i += 1
 
-tw = 40
-sys.stdout.write("[%s]" % (" " * tw))
-sys.stdout.flush()
-sys.stdout.write("\b" * (tw+1))
-new_prog = 0.0
+if args['sleep_interval'] > 0:
+    tw = 40
+    sys.stdout.write("[%s]" % (" " * tw))
+    sys.stdout.flush()
+    sys.stdout.write("\b" * (tw+1))
+    new_prog = 0.0
 
 orig_len = len(patID_seq)
 
@@ -178,19 +179,18 @@ while len(patID_seq) != 0:
         write_fasta(results_arr, patID_seq)
         [patID_seq.pop(key) for key in cur_keys]
         new_input()
+    if args['sleep_interval'] > 0: #display how much progress has been made
+        time.sleep(args['sleep_interval'])
+        prev_prog = new_prog
+        new_prog = (40 - (len(patID_seq)/float(orig_len))*40)
+        up_prog = new_prog - prev_prog
+        sys.stdout.write("="*int(round(up_prog)))
+        sys.stdout.flush()
 
+if args['sleep_interval'] > 0: #finish updating progress bar
+    sys.stdout.write("]\n")
+    print("One Moment.  Preparing Your Files!")
     time.sleep(args['sleep_interval'])
-    #display how much progress has been made
-    prev_prog = new_prog
-    new_prog = (40 - (len(patID_seq)/float(orig_len))*40)
-    up_prog = new_prog - prev_prog
-    sys.stdout.write("="*int(round(up_prog)))
-    sys.stdout.flush()
-
-#finish updating progress bar
-sys.stdout.write("]\n")
-print("One Moment.  Preparing Your Files!")
-time.sleep(args['sleep_interval'])
 
 log_file.close()
 fasta_out_file.close()

@@ -1,55 +1,37 @@
 <?php
 
+ignore_user_abort(true);
+
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-/*
-    gcloud beta compute --project "rcgrant-training-clarkmu" ssh --zone "us-central1-a" "g2p"
+if( empty($_FILES['file']) ){
+    exit("error");
+}
 
-    python sel.py ./unaligned_input.fasta /var/www/html/chromedriver /var/www/html/1/ 0
+$base = "/var/www/html";
+$id = uniqid();
+$dir = "$base/output/$id";
 
-    curl http://23.236.60.247/ -F file=@./unaligned_input.fasta
-*/
+shell_exec("mkdir -p $dir");
 
-    $cwd = "/var/www/html";
-    $dir = "$cwd/" . uniqid();
-    $file = "$dir/unaligned_input.fasta";
+$file = "$dir/unaligned_input.fasta";
 
-    try{
-        $inputFileTmp = $_FILES['file']['tmp_name'];
-        $fileInfo = pathinfo($inputFileTmp);
-        if( $fileParts['extension'] !== 'fasta' || ! move_uploaded_file($inputFileTmp, $file) ){
-            throw new Exception();
-        }
-    }catch(Exception $e){
-        die("No File uploaded.");
-    }
+move_uploaded_file($_FILES['file']['tmp_name'], $file);
 
-    shell_exec("mkdir -p $dir");
+shell_exec("python $base/selenium_python_geno2pheno.py $file $base/chromedriver $dir/ 0");
 
-    shell_exec("python $cwd/sel.py $file $cwd/chromedriver $dir 0");
+if( empty( glob("$dir/*_log") ) ){
 
-    // return file
+    exit("error");
+}
 
-    if( empty( glob("$dir/*_log") ) ){
+unlink($file);
 
-        die("Failed to get content from g2p");
-    }
+$tar = "$base/output/$id.tar.gz";
 
-    $tar = "$dir/g2p.tar.gz";
+shell_exec("tar -czf $tar -C $dir .");
 
-    shell_exec("tar -zvcf $tar -C $dir .");
-
-    ob_clean();
-
-    header('Content-Description: File Transfer');
-    header('Content-Type: application/octet-stream');
-    header('Content-Length: ' . filesize($tar));
-    header('Content-Disposition: attachment; filename=' . basename( $tar ));
-
-    readfile($tar);
-
-    // shell_exec("rm -rf $dir");
-
+header("Location: output.php?dir=$id");
 ?>
