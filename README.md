@@ -2,9 +2,9 @@
 
 Application to run sequences through geno2pheno
 
-Set up and dependencies can be found in the dockerfile
+Set up and dependencies can be found in ./dockerfile
 
-Example usage from terminal for local processing:
+Example from local terminal - no server set up, install selenium and chromedriver locally:
 
 ```bash
 python selenium_python_geno2pheno.py ./unaligned_input.fasta

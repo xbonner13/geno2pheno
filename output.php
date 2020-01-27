@@ -3,7 +3,7 @@
 ignore_user_abort(true);
 
 if(! isset($_GET['dir'])){
-    exit;
+    exit("error");
 }
 
 $tar = "/var/www/html/output/".$_GET['dir'].".tar.gz";

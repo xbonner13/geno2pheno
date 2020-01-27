@@ -1,10 +1,8 @@
 <?php
 
-ignore_user_abort(true);
+ini_set('max_execution_time', 0);
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
+ignore_user_abort(true);
 
 if( empty($_FILES['file']) ){
     exit("error");
