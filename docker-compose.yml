@@ -1,0 +1,22 @@
+name: geno2pheno
+services:
+  g2p:
+    # Apple Silicon
+    platform: linux/amd64
+    # Windows
+    #platform: darwin/amd64
+    #Linux AMD
+    #platform: linux/amd64
+    #Linux ARM
+    #platform: linux/arm64
+    build:
+      context: .
+      dockerfile: dockerfile
+    stdin_open: true
+    tty: true
+    ports:
+      - 8080:8080
+    container_name: geno2pheno
+    volumes:
+      - ".:/app"
+    image: geno2pheno

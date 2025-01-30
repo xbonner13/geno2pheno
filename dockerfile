@@ -1,24 +1,34 @@
-#docker build -t g2p ./
-#docker run -p 80:80 -p 443:443 g2p
+FROM python:3.8
 
-FROM ubuntu
+MAINTAINER Michael Clark <clarkmu@unc.edu>
 
-RUN apt-get update
-#python version 2.7
-RUN apt-get install apache2 php libapache2-mod-php python-pip unzip wget git chromium-browser -y
-RUN pip install selenium
+ENV PORT=8080
 
-RUN git clone https://github.com/xbonner13/geno2pheno /var/www/html/
+LABEL maintainer="Michael Clark <clarkmu@unc.edu>" \
+    io.k8s.description="Create an API version of Geno2Pheno" \
+    io.k8s.display-name="Geno2Pheno Server" \
+    io.openshift.expose-services="${PORT}:https"
 
-#if chromedriver does not work, get updated version
-RUN cd /var/www/html && \
+# update Ubuntu
+RUN apt update && apt upgrade -y
+
+RUN apt install software-properties-common wget vim unzip -y
+
+RUN cd /root && \
     wget https://chromedriver.storage.googleapis.com/79.0.3945.36/chromedriver_linux64.zip && \
-    unzip chromedriver_linux64.zip && \
-    rm chromedriver_linux64.zip index.html
+    unzip chromedriver_linux64.zip
 
-RUN chmod a+rw /var/www/html/
-RUN chmod a+x /var/www/html/chromedriver
+# install a webserver
+RUN pip3 install fastapi starlette uvicorn python-multipart uuid
 
-EXPOSE 80 443
+EXPOSE $PORT
 
-CMD ["apachectl", "-D", "FOREGROUND"]
+WORKDIR /app
+
+COPY . .
+RUN chmod -R 777 /app
+RUN chmod -R 777 /root
+USER 1001
+
+CMD uvicorn server:app --reload --host 0.0.0.0 --port $PORT
+# CMD sleep infinity

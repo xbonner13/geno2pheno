@@ -3,3 +3,5 @@
 
 chromedriver
 *.fasta
+
+__pycache__
