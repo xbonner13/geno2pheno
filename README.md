@@ -13,5 +13,5 @@ docker-compose build && docker-compose up
 ## Running
 
 ```bash
-python3 selenium_python_geno2pheno.py ./input/unaligned_input.fasta ./input/output 0
+python3 selenium_python_geno2pheno.py ./input/unaligned_input.fasta ./input/output
 ```
