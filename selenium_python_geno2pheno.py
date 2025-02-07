@@ -1,22 +1,29 @@
 import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
 import sys
 from datetime import date
 import re
 import os
 from itertools import islice
 
-args = dict(zip(['script', 'input_file', 'driver_dir', 'output_dir', 'sleep_interval'], sys.argv))
-
-if 'driver_dir' not in args:
-    args['driver_dir'] = os.getcwd() + "/chromedriver"
+args = dict(zip(['script', 'input_file', 'output_dir', 'sleep_interval'], sys.argv))
 
 if 'sleep_interval' in args:
     args['sleep_interval'] = int(args['sleep_interval'])
 else:
     args['sleep_interval'] = 5
+
+def create_webdriver():
+    chrome_options = webdriver.ChromeOptions()
+    chrome_options.add_argument('--no-sandbox')
+    chrome_options.add_argument('--headless')
+    chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument('--disable-dev-shm-usage')
+
+    driver = webdriver.Chrome(options=chrome_options)
+
+    return driver
 
 #build the string that goes into the text area
 def string_builder(my_keys, my_dict):
@@ -96,7 +103,7 @@ if 'output_dir' in args:
 else:
     today = str(date.today())
     log_file = open('Geno2PhenoTest' + today + '_log', 'w')
-    fasta_out_file = open('Geno2PhenoTest' + today + '.fasta', 'w')   
+    fasta_out_file = open('Geno2PhenoTest' + today + '.fasta', 'w')
 
 log_file.write('ID\t\t\t\tV3 Loop\t\t\t\tSubtype\t\t\t\tFPR\t\t\t\tpercentage')
 
@@ -127,11 +134,7 @@ if args['sleep_interval'] > 0:
 orig_len = len(patID_seq)
 
 #locate the driver
-options = Options()
-options.add_argument("--headless")
-options.add_argument('--disable-gpu')
-options.add_argument('--no-sandbox')
-driver = webdriver.Chrome(args['driver_dir'], chrome_options=options)
+driver = create_webdriver()
 driver.get('https://coreceptor.geno2pheno.org/');
 
 while len(patID_seq) != 0:

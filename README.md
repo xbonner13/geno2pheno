@@ -1,23 +1,17 @@
 # geno2pheno
 
-Application to run sequences through geno2pheno
+Application to automate running sequences through geno2pheno core receptor
 
-Set up and dependencies can be found in ./dockerfile
+## Setup
 
-Example from local terminal - no server set up, install selenium and chromedriver locally:
+This version of Python and Selenium automagically install drivers and dependencies. Does not work on Apple Silicone.
 
 ```bash
-python selenium_python_geno2pheno.py ./unaligned_input.fasta
+docker-compose build && docker-compose up
 ```
 
-Example usage from terminal to remote server set up with repo:
+## Running
 
 ```bash
-curl -F file=@./unaligned_input.fasta -o g2p.tar.gz -L http://server.url/
-```
-
-Extract file received from curl (includes \_log and .fasta)
-
-```bash
-tar -xzvf g2p.tar.gz
+python3 selenium_python_geno2pheno.py ./input/unaligned_input.fasta ./input/output 0
 ```
