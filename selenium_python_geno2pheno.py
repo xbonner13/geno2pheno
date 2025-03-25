@@ -1,11 +1,11 @@
-import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 import sys
 import os
-from itertools import islice
 
-args = dict(zip(['script', 'input_file', 'output_dir'], sys.argv))
+from Bio.SeqIO import parse as SeqIO_parse
+
+args = dict(zip(['script', 'input_path', 'job_id'], sys.argv))
 
 def create_webdriver():
     chrome_options = webdriver.ChromeOptions()
@@ -15,10 +15,7 @@ def create_webdriver():
     chrome_options.add_argument('--disable-dev-shm-usage')
     return webdriver.Chrome(options=chrome_options)
 
-def string_builder(keys, seq_dict):
-    return ''.join(f'>{key}\n{seq_dict[key]}\n' for key in keys)
-
-def log_file_string_creator(to_w):
+def parse_results(to_w):
     out_string = ""
     for line in to_w[1:]:
         parts = line.split()
@@ -56,35 +53,56 @@ def parse_fasta(file_path):
     return patID_seq
 
 def process():
-    patID_seq = parse_fasta(args['input_file'])
+    input_path = args['input_path']
 
-    output_dir = args.get('output_dir', '')
-    if output_dir and not output_dir.endswith('/'):
-        output_dir += '/'
+    job_id = args['job_id'] or 'Geno2PhenoTest_log'
 
-    os.makedirs(output_dir, exist_ok=True)
-    log_file_path = os.path.join(output_dir, 'Geno2PhenoTest_log.csv')
+    output_path = input_path
+
+    seqs = []
+
+    if os.path.isfile(input_path):
+        output_path = os.path.dirname(input_path)
+        if ".fa" in input_path:
+            seqs.extend(
+                SeqIO_parse(input_path, "fasta")
+            )
+    else:
+        for filename in os.listdir(input_path):
+            if ".fa" in filename:
+                file = os.path.join(input_path, filename)
+                seqs.extend(
+                    SeqIO_parse(file, "fasta")
+                )
+
+    log_file_path = os.path.join(output_path, f"{job_id}.csv")
+
+    seqs = list(seqs)
+
+    num_seqs = len(seqs)
+
+    print(f"Number of sequences: {num_seqs}")
+
+    # group into sets of 50 to respect geno2pheno's limit
+    grouped_seqs = [seqs[i:i + 50] for i in range(0, num_seqs, 50)]
+
+    # create header for csv
+    csv_output = ",".join(['ID', 'V3 Loop', 'Subtype', 'FPR', 'Percentage'])
+
+    driver = create_webdriver()
+    driver.get('https://coreceptor.geno2pheno.org/')
+
+    for group in grouped_seqs:
+        txt_field = ''.join(f'>{seq.id}\n{seq.seq}\n' for seq in group)
+        table = get_geno2pheno_results(driver, txt_field)
+        results_arr = table.text.split('\n')
+        csv_output += parse_results(results_arr)
+        new_input(driver)
 
     with open(log_file_path, 'w') as log_file:
-        log_file.write(
-            ",".join(['ID', 'V3 Loop', 'Subtype', 'FPR', 'Percentage'])
-        )
+        log_file.write(csv_output)
 
-        driver = create_webdriver()
-        driver.get('https://coreceptor.geno2pheno.org/')
-
-        while patID_seq:
-            batch_size = min(len(patID_seq), 50)
-            cur_keys = list(islice(patID_seq, batch_size))
-            txt_field = string_builder(cur_keys, patID_seq)
-            table = get_geno2pheno_results(driver, txt_field)
-            results_arr = table.text.split('\n')
-            log_file.write(log_file_string_creator(results_arr))
-            new_input(driver)
-            for key in cur_keys:
-                patID_seq.pop(key)
-
-        driver.quit()
+    driver.quit()
 
 if __name__ == "__main__":
     process()

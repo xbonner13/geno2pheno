@@ -13,5 +13,7 @@ docker-compose build && docker-compose up
 ## Running
 
 ```bash
-python3 selenium_python_geno2pheno.py ./input/unaligned_input.fasta ./input/output
+python3 selenium_python_geno2pheno.py ./input named_output
 ```
+
+The first argument can be a fasta file or directory of fasta files.
