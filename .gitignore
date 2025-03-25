@@ -1,7 +1,4 @@
 .vscode
 .DS_STORE
 
-chromedriver
-*.fasta
-
 __pycache__

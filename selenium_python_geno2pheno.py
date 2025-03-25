@@ -52,11 +52,7 @@ def parse_fasta(file_path):
                 seq_nextline_in = ""
     return patID_seq
 
-def process():
-    input_path = args['input_path']
-
-    job_id = args['job_id'] or 'Geno2PhenoTest_log'
-
+def process(input_path, job_id):
     output_path = input_path
 
     seqs = []
@@ -105,4 +101,6 @@ def process():
     driver.quit()
 
 if __name__ == "__main__":
-    process()
+    input_path = args['input_path']
+    job_id = args['job_id'] or 'Geno2PhenoTest_log'
+    process(input_path, job_id)
