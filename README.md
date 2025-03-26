@@ -17,3 +17,9 @@ python3 selenium_python_geno2pheno.py ./input named_output
 ```
 
 The first argument can be a fasta file or directory of fasta files.
+
+### Run Test
+
+```bash
+python3 test.py
+```
