@@ -1,5 +1,5 @@
 import unittest
-from selenium_python_geno2pheno import process
+from selenium_python_geno2pheno import Geno2Pheno
 import os
 
 test_input_samples = "./input/unaligned_input.fasta"
@@ -11,7 +11,8 @@ class TestMyFunctions(unittest.TestCase):
         expected_output_file = f"./input/test/{job_id}.csv"
         actual_output_file = f"./input/{job_id}.csv"
 
-        process(test_input_samples, job_id)
+        geno2pheno = Geno2Pheno(test_input_samples, job_id)
+        geno2pheno.process()
 
         self.assertTrue(os.path.exists(test_input_samples))
         self.assertTrue(os.path.exists(expected_output_file))
