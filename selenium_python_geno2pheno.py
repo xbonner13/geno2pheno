@@ -99,11 +99,11 @@ class Geno2Pheno:
 
         with open(log_file_path, 'w') as log_file:
             if len(self.seqs_valid) > 0:
-                log_file.write("ID,V3 Loop,Subtype,FPR,Percentage")
+                log_file.write("ID,V3 Loop,Subtype,FPR,Percentage\n")
             for seq in self.seqs_invalid:
-                log_file.write(",".join(seq))
+                log_file.write(",".join(seq) + "\n")
             for seq in self.seqs_valid:
-                log_file.write(",".join(seq))
+                log_file.write(",".join(seq) + "\n")
 
         self.driver.quit()
 
