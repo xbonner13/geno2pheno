@@ -1,4 +1,5 @@
 ID,V3 Loop,Subtype,FPR,Percentage
+Subtype_A,All aligned frames of Subtype_A contain stop codons or are too short! Best alignments for the three frames: --TP*--QY--KKKYTY---GTRK---AFFAT----GDVIGDI--RQ---, CIRPH-NNT--RKSIHM---GPGK---PFLQQ-----ET**ET------*, CS*RN----------------P*K----LFV*-----DPI-TI---QEKV. Please check your sequence.
 Sample_17_D9_B4,CTKPDNKIRKTRIHIGPGRAFHTTKGIGDIRQAYC,B,0%,94.98%
 Sample_17_D9_B5,CTKPDNKIRKTRIHIGPGRAFHTTKGIGDIRQAYC,B,0%,94.98%
 Sample_17_G4_A5,CTRPNNNTRRSVHIGPGRAFFTTGDIIGDIRQAHC,B,67.5%,16.55%
