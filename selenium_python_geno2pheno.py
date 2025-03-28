@@ -54,7 +54,8 @@ class Geno2Pheno:
             if self.validate_result(data):
                 self.seqs_valid.append(data)
             else:
-                self.seqs_invalid.append([data[0], line])
+                error_msg = ' '.join(parts[4:])
+                self.seqs_invalid.append([data[0], error_msg])
 
     def validate_result(self, row):
         return '%' in row[3] and '%' in row[4]
