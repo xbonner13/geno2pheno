@@ -1,22 +1,27 @@
+from io import StringIO
 import sys
 import os
 import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from Bio.SeqIO import parse as SeqIO_parse
+from selenium.webdriver.support.ui import Select
 
 def ease_off_retry(i):
     time.sleep(5 * i)
 
+unique_seq_id = "XiaoBao"
+unique_sample_string = f">{unique_seq_id}\nAAATTAACCCCGATCTGTGTTACTTTAAATTGCACTGATGATTGGAATACTACTAATGGGAATACTACCAATGGGAATGCTAATAATACCACTGGTAATAGTTTGGAAAGAGAAAAAGGAGAAATAAAGAAATGCTCTTTCAATATCACCACAAGCATAAAAGAAAAGAAAAAAGACTATGCATTCTTTTATAAGCTTGATATAGTACAAATAGATGATAGTGATAATAATAGTAATAGTTATAGGTTGATAAATTGTAACACCTAGTACAGTACAATGTACACATGGAATTAAGCCAGTAGTGTCCACTCAACTGCTGCTAAATGGCAGCCTAGCAGAAGAAGAGATAGTGATTAGATCTGACAATTTCTCGGACAATGCTAAAAACATAATAGTGCAGCTGAAGGAACCCATAGAAATTATTTGTATAAGACCCCATAACAATACAAGAAAAAGTATACATATGGGACCAGGAAAGCCTTTTTTGCAACAGGAGACGTAATAGGAGACATAAGACAA"
+
 class Geno2Pheno:
-    seqs_valid = []
-    seqs_invalid = []
+    input_path = ""
     output_path = ""
+    job_id = ""
+    results = []
 
     def __init__(self, input_path, job_id):
         self.input_path = input_path
         self.job_id = job_id or 'Geno2PhenoTest_log'
-        self.create_webdriver()
 
     def read_fasta(self):
         seqs = []
@@ -42,46 +47,44 @@ class Geno2Pheno:
         chrome_options.add_argument('--headless')
         chrome_options.add_argument('--disable-gpu')
         chrome_options.add_argument('--disable-dev-shm-usage')
-        self.driver = webdriver.Chrome(options=chrome_options)
-
-    def parse_results(self, to_w):
-        for line in to_w[1:]:
-            parts = line.split(' ')
-            if len(parts) == 6 or parts[3] == 'B':
-                data = [parts[1], parts[2], parts[3], parts[4], parts[5]]
-            else:
-                data = [parts[1], parts[2], parts[3], parts[6], parts[7]]
-            if self.validate_result(data):
-                self.seqs_valid.append(data)
-            else:
-                error_msg = ' '.join(parts[4:])
-                self.seqs_invalid.append([data[0], error_msg])
-
-    def validate_result(self, row):
-        return '%' in row[3] and '%' in row[4]
+        driver = webdriver.Chrome(options=chrome_options)
+        return driver
 
     def get_geno2pheno_results(self, txt_field):
+        # docs on By.CSS_SELECTOR https://saucelabs.com/resources/blog/selenium-tips-css-selectors
+        driver = self.create_webdriver()
+        data = {}
         try:
-            self.driver.find_element(By.XPATH, '//*[@id="g2pmain"]/div/center/table/tbody/tr[5]/td/select/option[8]').click()
-            seq_field = self.driver.find_element(By.XPATH, '//*[@id="g2pmain"]/div/center/table/tbody/tr[8]/td/textarea')
+            # navigate to the geno2pheno page
+            driver.get('https://coreceptor.geno2pheno.org/')
+            time.sleep(10)
+            # select Significance level 15%
+            select_element = driver.find_element(By.CSS_SELECTOR, 'select[name="slev_cxcr4"]')
+            select_obj = Select(select_element)
+            select_obj.select_by_value('8')
+            # fill sequence input textarea
+            seq_field = driver.find_element(By.CSS_SELECTOR, 'textarea[name="v3seq"]')
             seq_field.send_keys(txt_field)
-            self.driver.find_element(By.XPATH, '//*[@id="XactionCell"]/input').click()
-            result = self.driver.find_element(By.XPATH, '//*[@id="g2pmain"]/div/table[2]')
-            result = result.text.split('\n')
-            return {"success": True, "data": result}
+            # click on the submit button
+            driver.find_element(By.CSS_SELECTOR, 'input[type="submit"][value="Go"]').click()
+            time.sleep(10)
+            # Click on the CSV button
+            driver.find_element(By.CSS_SELECTOR, 'input[name="viewResSec"]').click()
+            time.sleep(10)
+            # Get the entire page text and remove the header line
+            page_text = driver.find_element(By.CSS_SELECTOR, "body").text
+            print(f"Page text: {page_text}")
+            result = page_text.split('\n')
+            result = result[1:]
+            if len(result) == 2: # Remove items containing unique_seq_id
+                result = [item for item in result if unique_seq_id not in item]
+            data = {"success": True, "data": result}
         except Exception as e:
-            return {"success": False, "data": e}
-
-    def navigate_to_geno2pheno(self, attempt):
-        try:
-            self.driver.get('https://coreceptor.geno2pheno.org/')
-            return True
-        except Exception as e:
-            if attempt < 10:
-                ease_off_retry(attempt)
-                self.navigate_to_geno2pheno(attempt + 1)
-            else:
-                return False
+            print(f"Error: {e}")
+            data = {"success": False, "data": e}
+        finally:
+            driver.quit()
+        return data
 
     def process(self):
         seqs: list = self.read_fasta()
@@ -91,32 +94,19 @@ class Geno2Pheno:
         grouped_seqs = [seqs[i:i + 50] for i in range(0, num_seqs, 50)]
 
         for group in grouped_seqs:
+            if len(group) == 1: # handle G2P case for single sequence
+                seq_file = StringIO(unique_sample_string)
+                seq = SeqIO_parse(seq_file, "fasta")
+                group.append(seq)
             self.process_group(group, 1)
-
-        print("seqs_valid", self.seqs_valid)
-        print("seqs_invalid", self.seqs_invalid)
 
         log_file_path = os.path.join(self.output_path, f"{self.job_id}.csv")
 
         with open(log_file_path, 'w') as log_file:
-            if len(self.seqs_valid) > 0:
-                log_file.write("ID,V3 Loop,Subtype,FPR,Percentage\n")
-            for seq in self.seqs_invalid:
-                log_file.write(",".join(seq) + "\n")
-            for seq in self.seqs_valid:
-                log_file.write(",".join(seq) + "\n")
-
-        self.driver.quit()
+            log_file.write("ID,V3 Loop,Subtype,FPR,Percentage\n")
+            log_file.write('\n'.join(self.results))
 
     def process_group(self, group, attempt):
-        navigated = self.navigate_to_geno2pheno(1)
-
-        if not navigated:
-            self.seqs_invalid.append(["Error: Failed to navigate to geno2pheno."])
-            for seq in group:
-                self.seqs_invalid.append([seq.id, "NETWORK ERROR: Please resubmit."])
-            return False
-
         txt_field = ''.join(f'>{seq.id}\n{seq.seq}\n' for seq in group)
         result = self.get_geno2pheno_results(txt_field)
 
@@ -125,11 +115,10 @@ class Geno2Pheno:
                 ease_off_retry(attempt)
                 self.process_group(group, attempt + 1)
             else:
-                self.seqs_invalid.append(["Error: " + {result["data"]}])
                 for seq in group:
-                    self.seqs_invalid.append([seq.id, "NETWORK ERROR: Please resubmit."])
+                    self.results.append(f"{seq.id}: Network Error")
         else:
-            self.parse_results(result["data"])
+            self.results += result["data"]
 
 if __name__ == "__main__":
     args = dict(zip(['script', 'input_path', 'job_id'], sys.argv))
